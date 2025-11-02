@@ -1,5 +1,7 @@
 # Dependências
-node_modules/
+passo1/node_modules/
+passo2/node_modules/
+
 
 # Logs
 npm-debug.log*
