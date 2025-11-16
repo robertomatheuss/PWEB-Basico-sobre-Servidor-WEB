@@ -1,6 +1,8 @@
 var express = require('express');
 var router = express.Router();
 const { body, validationResult } = require('express-validator');
+const db = require('../db');
+
 
 /**
  * GET /contato – exibe o formulário.
@@ -14,13 +16,27 @@ router.get('/', (req, res) => {
     });
 });
 
+router.get('/list', (req, res) => {
+  const rows = db.prepare(`
+    SELECT id, nome, email, idade, genero, interesses, mensagem, criado_em
+    FROM contatos
+    ORDER BY criado_em DESC
+  `).all();
+
+  res.render('list-contact', {
+    title: 'Lista de Contatos',
+    contatos: rows
+  });
+});
+
+
 /**
  * POST /contato – valida, sanitiza e decide: erro -> reexibir formulário; sucesso -> página de sucesso
  */
 router.post('/',
     // Validações e sanitizações
     [
-        body('nome')    
+        body('nome')
             .trim().isLength({ min: 3, max: 60 })
             .trim()
             .escape()
@@ -80,10 +96,27 @@ router.post('/',
 
         // Aqui você poderia persistir no banco, enviar e-mail, etc.
 
+        const stmt = db.prepare(`
+            INSERT INTO contatos (nome, email, idade, genero, interesses, mensagem, aceite)
+            VALUES (@nome, @email, @idade, @genero, @interesses, @mensagem, @aceite)
+            `);
+        stmt.run({
+            nome: data.nome,
+            email: data.email,
+            idade: data.idade || null,
+            genero: data.genero || null,
+            interesses: Array.isArray(data.interesses)
+                ? data.interesses.join(',')
+                : (data.interesses || ''),
+            mensagem: data.mensagem,
+            aceite: data.aceite ? 1 : 0
+        });
         return res.render('success', {
             title: 'Enviado com sucesso',
             data
         });
+
+
     }
 );
 
