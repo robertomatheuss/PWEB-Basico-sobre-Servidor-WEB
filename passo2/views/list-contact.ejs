@@ -65,6 +65,10 @@
             <td><%= c.mensagem %></td>
             <td><%= c.criado_em %></td>
             <td class="actions">
+                  <!-- Botão de alterar -->
+                <a href="/contact?id=<%= c.id %>">
+                    <button type="submit">Alterar</button>
+                </a>
                 <form action="/contact/<%= c.id %>/delete" method="post"
                     onsubmit="return confirm('Tem certeza que deseja excluir o contato <%= c.nome %>?');">
                     <button type="submit">Excluir</button>

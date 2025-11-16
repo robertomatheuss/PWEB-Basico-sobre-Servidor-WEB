@@ -8,11 +8,20 @@ const db = require('../db');
  * GET /contato – exibe o formulário.
  * Enviamos 'data' vazio e 'errors' vazio para facilitar o template.
  */
-router.get('/', (req, res) => {
-    res.render('contact', {
-        title: 'Formulário de Contato',
-        data: {},
-        errors: {}
+router.get('/', function(req, res, next) {
+  const id = req.query.id;
+  let data = null;
+
+  if (id) {
+    // Busca o contato com esse id no banco
+    const stmt = db.prepare('SELECT * FROM contatos WHERE id = ?');
+    data = stmt.get(id);
+  }
+
+  res.render('contact', {
+    title: 'Formulário de Contato',
+    data, // pode ser null ou um objeto com os dados
+    errors:{}
     });
 });
 
@@ -88,6 +97,8 @@ router.post('/',
     (req, res) => {
         const errors = validationResult(req);
 
+        
+        
         // Para repovoar o formulário, mantemos os dados originais (com algumas sanitizações acima)
         const data = {
             nome: req.body.nome,
@@ -98,6 +109,36 @@ router.post('/',
             mensagem: req.body.mensagem,
             aceite: req.body.aceite === 'on'
         };
+        
+        if (req.body.id) {
+        // MODO EDIÇÃO: altera só o nome (pode ampliar depois se quiser)
+            const stmt = db.prepare(`
+                UPDATE contatos
+                SET
+                    nome       = @nome,
+                    email      = @email,
+                    idade      = @idade,
+                    genero     = @genero,
+                    interesses = @interesses,
+                    mensagem   = @mensagem,
+                    aceite     = @aceite
+                WHERE id = @id
+            `);
+
+            stmt.run({
+                id: req.body.id,
+                nome: data.nome,
+                email: data.email,
+                idade: data.idade || null,
+                genero: data.genero || null,
+                interesses: Array.isArray(data.interesses)
+                    ? data.interesses.join(',')
+                    : (data.interesses || ''),
+                mensagem: data.mensagem,
+                aceite: data.aceite ? 1 : 0
+            });
+            return res.redirect('/contact/list');
+        }
 
         if (!errors.isEmpty()) {
             // Mapeamos erros por campo para facilitar no EJS
